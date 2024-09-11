@@ -34,13 +34,13 @@ At a top level, this script does the following:
 1. Renames all `.TS.mp4` files to just `.mp4`
 2. Renames any JSON metadata files which end in `.TS.mp4.json` to end in just `.mp4.json` to match the files updated in step 1
 3. Converts all HEIC files which have an associated HEIC.json file to JPG
-4. Renames the JSON metadata file associated with the file in step 3 to `JPG.json` for example `filename.HEIC.json` would become `filename.jpg.json`
+4. Renames the JSON metadata file associated with the HEIC file in step 3 to `JPG.json` for example `filename.HEIC.json` would become `filename.jpg.json`
 5. Updates the date/timestamp metadata of all photo and video files using the JSON metadata files
 
 We do all of the above because:
 
 1. exiftool sometimes has trouble parsing files which have "double" extensions such as .TS.mp4, so we can just convert them to .mp4 without any issues. The `.TS.mp4` files are created by Top Shot or motion photos.
-2. Google Photos converts HEIC files to JPG in their backend. However, when we download the files through Google Takeout, it keeps the .HEIC extension. exiftool does not like that, so we need to fix the extension to be JPG. Note that if you manually download Photo Albums from Google Photos (bypassing Googke Takeout) then any HEIC download are true HEIC, so we need to make sure we don't convert these files to JPG.
+2. Google Photos converts HEIC files to JPG in their backend. However, when we download the files through Google Takeout, it keeps the .HEIC extension. exiftool does not like that, so we need to fix the extension to be JPG. Note that if you manually download Photo Albums from Google Photos (bypassing Googke Takeout) then any HEIC download are true HEIC, so we need to make sure we don't convert these files to JPG, which is why we check for a JSON metadata file first.
 3. Google provides us the metadata in the form of JSON files. We can fetch the metadata from these files and use exiftool to override the properties in the image/video files.
 
 ## Other useful commands

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -152,8 +152,6 @@ func renameFiles(dirPath string) error {
 		// If any .HEIC files have .HEIC.json files, then they are not "true" HEIC
 		// and are actually JPG files with the HEIC extension. We can rename them
 		// to .JPG and update the .HEIC.json file to .jpg.json as well
-
-		// TODO: We might want to only do this in the "Photos from" folders
 
 		// Check if the current file has a .HEIC extension
 		if strings.HasSuffix(info.Name(), ".HEIC") {
