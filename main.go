@@ -153,6 +153,8 @@ func renameFiles(dirPath string) error {
 		// and are actually JPG files with the HEIC extension. We can rename them
 		// to .JPG and update the .HEIC.json file to .jpg.json as well
 
+		// TODO: We might want to only do this in the "Photos from" folders
+
 		// Check if the current file has a .HEIC extension
 		if strings.HasSuffix(info.Name(), ".HEIC") {
 			// Construct the expected .HEIC.json filename
