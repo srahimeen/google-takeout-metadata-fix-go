@@ -36,7 +36,7 @@ func main() {
 		return
 	}
 
-	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files
+	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
 
 	if err := renameFiles(dirPath); err != nil {
 		fmt.Println("Error renaming files:", err)
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Update the datetime from json to image/video files in the specified directory and its subdirectories
-	
+
 	if err := exiftoolMetadataFix(dirPath); err != nil {
 		fmt.Println("Error executing exiftool:", err)
 		return
