@@ -21,7 +21,7 @@ func main() {
 		return
 	}
 
-	// VALIDATE THE DIRECTORY PATH
+	// Validate the directory path
 
 	fmt.Println("The directory you want to use is: " + dirPath)
 
@@ -36,27 +36,18 @@ func main() {
 		return
 	}
 
-	// TODO: RENAME ALL .TS.mp4 files to just .mp4 AND .TS.mp4.json files to just mp4.json
-	if err := renameTSmp4Files(dirPath); err != nil {
+	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files
+
+	if err := renameFiles(dirPath); err != nil {
 		fmt.Println("Error renaming files:", err)
 		return
 	}
 
+	// Update the datetime from json to image/video files in the specified directory and its subdirectories
 	
-	// TODO: CONVERT HEIC FILES TO jpg
-	// Do this only if a JSON file for it exists
-	// check if the file is HEIC
-	// if it is HEIC, see if a JSON file for it exists
-	// if it exists then
-	// convert the HEIC file to jpg
-	// rename the HEIC.json file to jpg.json
-	// Otherwise do nothing since the HEIC was manually downloaded and is a true HEIC with proper metadata
-
-	// UPDATE THE DATETIME FROM JSON TO IMAGE AND VIDEO FILES
-
-	// Fix metadata in the specified directory and its subdirectories
 	if err := exiftoolMetadataFix(dirPath); err != nil {
 		fmt.Println("Error executing exiftool:", err)
+		return
 	} else {
 		fmt.Println("Command executed successfully.")
 	}
@@ -107,10 +98,23 @@ func exiftoolMetadataFix(dirPath string) error {
 	return cmd.Run()
 }
 
+func renameFiles(dirPath string) error {
 
-// Rename .TS.mp4 and .TS.mp4.json files in the directory and subdirectories
-func renameTSmp4Files(dirPath string) error {
+	// Keep track of renamed file paths
+    renamedFiles := make(map[string]bool)
+
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+
+		// Uncomment this if we need extra debugging
+		// fmt.Println("Current file: " +  path)
+
+		// Skip paths that have already been renamed
+		if renamedFiles[path] {
+			// Uncomment this if we need extra debugging
+			// fmt.Println("File " + path + " has already been renamed, skipping iteration!")
+			return nil
+		}
+
 		if err != nil {
 			return err
 		}
@@ -125,6 +129,9 @@ func renameTSmp4Files(dirPath string) error {
 			if err := os.Rename(path, newPath); err != nil {
 				fmt.Println("Error renaming file:", err)
 			}
+
+			// Record the renamed TS.mp4 file
+			renamedFiles[path] = true
 		}
 
 		// Rename .TS.mp4.json files to .mp4.json
@@ -137,10 +144,63 @@ func renameTSmp4Files(dirPath string) error {
 			if err := os.Rename(path, newPath); err != nil {
 				fmt.Println("Error renaming file:", err)
 			}
+
+			// Record the renamed TS.mp4.json file
+			renamedFiles[path] = true
+		}
+
+		// If any .HEIC files have .HEIC.json files, then they are not "true" HEIC
+		// and are actually JPG files with the HEIC extension. We can rename them
+		// to .JPG and update the .HEIC.json file to .jpg.json as well
+
+		// Check if the current file has a .HEIC extension
+		if strings.HasSuffix(info.Name(), ".HEIC") {
+			// Construct the expected .HEIC.json filename
+
+			heicJsonFilePath := path + ".json"
+
+			// Check if the .HEIC.json file exists
+			if _, err := os.Stat(heicJsonFilePath); err == nil {
+				// We only consider HEIC files which also have HEIC.json files
+				// Ignore any standalone HEIC files
+				fmt.Printf("Found HEIC file %s and metadata file %s\n", path, heicJsonFilePath)
+
+				// Construct the new .jpg filename
+				jpgFilePath := strings.TrimSuffix(path, ".HEIC") + ".jpg"
+
+				// Rename the .HEIC file to .jpg
+				fmt.Printf("Renaming %s to %s\n", path, jpgFilePath)
+				if err := os.Rename(path, jpgFilePath); err != nil {
+					return fmt.Errorf("Failed to rename %s to %s: %w", path, jpgFilePath, err)
+				}
+
+				// Record the renamed .HEIC file
+				renamedFiles[path] = true
+
+				// Construct the new .jpg.json filename
+				jpgJsonFilePath := strings.TrimSuffix(heicJsonFilePath, ".HEIC.json") + ".jpg.json"
+
+				// Rename the .HEIC.json file to .jpg.json
+				fmt.Printf("Renaming %s to %s\n", heicJsonFilePath, jpgJsonFilePath)
+				
+				if err := os.Rename(heicJsonFilePath, jpgJsonFilePath); err != nil {
+					return fmt.Errorf("Failed to rename %s to %s: %w", heicJsonFilePath, jpgJsonFilePath, err)
+				}
+
+				// Record the renamed .HEIC.json file
+                renamedFiles[heicJsonFilePath] = true
+			} else {
+				fmt.Println("Error with finding HEIC.json file:", err)
+			}
 		}
 
 		return nil
 	})
 
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
