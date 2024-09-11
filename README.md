@@ -15,7 +15,7 @@ This script assumes you use the following process to perform your Google Photos 
 
 ## Technical Requirements
 
-1. This script assumes you are a Android/Pixel user, as it does some HEIC conversions
+1. This script assumes you are a Android/Pixel user as it does some HEIC conversions
 2. [Go](https://go.dev/) needs to be installed and be available on the path `go`
 3. [exiftool](https://exiftool.org/) needs to be installed and be available on the path `exiftool`
 4. This script has only been tested to work on Windows
