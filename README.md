@@ -35,7 +35,7 @@ At a top level, this script does the following:
 2. Renames any JSON metadata files which end in `.TS.mp4.json` to end in just `.mp4.json` to match the files updated in step 1
 3. Converts all HEIC files which have an associated HEIC.json file to JPG
 4. Renames the JSON metadata file associated with the HEIC file in step 3 to `JPG.json` for example `filename.HEIC.json` would become `filename.jpg.json`
-5. Updates the date/timestamp metadata of all photo and video files using the JSON metadata files
+5. Updates the date/timestamp metadata of all photo and video files using the JSON metadata files using `exiftool`
 
 We do all of the above because:
 
