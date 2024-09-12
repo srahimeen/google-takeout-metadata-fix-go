@@ -28,7 +28,7 @@ func main() {
 	// Trim whitespace and newline characters from the input
 	dirPath = strings.TrimSpace(dirPath)
 
-	fmt.Println("The formatted directory you want to use is: " + dirPath)
+	fmt.Println("The formatted directory is: " + dirPath)
 
 	// Validate if the path is a directory
 	if !isDir(dirPath) {
@@ -37,14 +37,13 @@ func main() {
 	}
 
 	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
-
 	if err := renameFiles(dirPath); err != nil {
 		fmt.Println("Error renaming files:", err)
 		return
 	}
 
 	// Update the datetime from json to image/video files in the specified directory and its subdirectories
-
+	// This needs to be run after any file renaming/updating has taken place
 	if err := exiftoolMetadataFix(dirPath); err != nil {
 		fmt.Println("Error executing exiftool:", err)
 		return
@@ -92,7 +91,7 @@ func exiftoolMetadataFix(dirPath string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	fmt.Println("Running exiftool command.")
+	fmt.Println("Running exiftool to fix metadata.")
 
 	// Execute the command
 	return cmd.Run()
@@ -159,9 +158,9 @@ func renameFiles(dirPath string) error {
 
 			heicJsonFilePath := path + ".json"
 
-			// Check if the .HEIC.json file exists
+			// Check if the related .HEIC.json file exists
 			if _, err := os.Stat(heicJsonFilePath); err == nil {
-				// We only consider HEIC files which also have HEIC.json files
+				// We only consider HEIC files which also have related HEIC.json files
 				// Ignore any standalone HEIC files
 				fmt.Printf("Found HEIC file %s and metadata file %s\n", path, heicJsonFilePath)
 
@@ -196,7 +195,6 @@ func renameFiles(dirPath string) error {
 
 		return nil
 	})
-
 
 	if err != nil {
 		return err
