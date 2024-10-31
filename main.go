@@ -185,6 +185,8 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 	return err
 }
 
+// TODO currently does not support supplemental json names
+// Needs to be updated
 func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]bool) error {
 	// Rename .TS.mp4 files to .mp4
 	if strings.HasSuffix(info.Name(), ".TS.mp4") {
