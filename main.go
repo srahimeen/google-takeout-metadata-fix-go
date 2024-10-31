@@ -178,9 +178,9 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 		return nil
 	})
 
-	fmt.Printf("  Successful updates: %d\n", successCount)
-	fmt.Printf("  Errors encountered: %d\n", errorCount)
-	fmt.Printf("  Files skipped: %d\n", skipCount)
+	fmt.Printf("Success: %d\n", successCount)
+	fmt.Printf("Errors: %d\n", errorCount)
+	fmt.Printf("Skipped: %d\n", skipCount)
 
 	return err
 }
@@ -246,7 +246,7 @@ func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]
 
 			fmt.Printf("Parts array %v\n", parts)
 
-			// Check if the string before .json is supplemental-something
+			// Case for JSON files which have supplemental something, ie. IMG_2086.HEIC.supplemental-metadata.json
 			if len(parts) >= 2 {
 				secondToLast := parts[len(parts)-2]
 
@@ -272,6 +272,26 @@ func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]
 						return fmt.Errorf("failed to rename file: %w", err)
 					}
 					
+					// Document that we have renamed this file
+					renamedFiles[path] = true;
+
+					fmt.Printf("HEIC JSON file renamed from %s to: %s\n", info.Name(), newPath)
+				}
+
+				// Case for JSON files which have no supplemental string, ie: IMG_2086.HEIC.json
+				if (strings.Contains(secondToLast, "HEIC")) {
+					fmt.Printf("Second to last part DOES not have supplemental: %s\n", secondToLast)
+					
+					// Change the HEIC to jpg in the file name
+					parts[len(parts)-2] = "jpg"
+					updatedFilenameString := strings.Join(parts, ".")
+
+					// Rename the file
+					newPath := filepath.Join(filepath.Dir(path), updatedFilenameString)
+					if err := os.Rename(path, newPath); err != nil {
+						return fmt.Errorf("failed to rename file: %w", err)
+					}
+
 					// Document that we have renamed this file
 					renamedFiles[path] = true;
 
