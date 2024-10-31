@@ -42,6 +42,8 @@ func main() {
 
 	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
 
+	// TODO TS.mp4 still needs to be done
+
 	// Use a map to keep track of renamed files
 	renamedFiles := make(map[string]bool)
 
@@ -65,16 +67,7 @@ func main() {
 	}
 
 	// Update the datetime from json to image/video files in the specified directory and its subdirectories
-	// This needs to be run after any file renaming/updating has taken place
-	// TODO renable once testing is done
-	// if err := exiftoolMetadataFix(dirPath); err != nil {
-	// 	fmt.Println("Error executing exiftool:", err)
-	// 	return
-	// } else {
-	// 	fmt.Println("Command executed successfully.")
-	// }
-
-	if err := exiftoolMetadataFixVariant(dirPath); err != nil {
+	if err := exiftoolMetadataFixFileByFile(dirPath); err != nil {
 		fmt.Println("Error executing exiftool:", err)
 		return
 	} else {
@@ -93,7 +86,8 @@ func isDir(path string) bool {
 }
 
 // Run exiftool to copy dates from JSON to image/video files
-func exiftoolMetadataFix(dirPath string) error {
+// This does not work with JSON metadata files in the format of filename.extension.supplemental-bla.json
+func exiftoolMetadataFixBulk(dirPath string) error {
 	// Define the exiftool command and its arguments
 	cmd := exec.Command("exiftool",
 		"-d", "%s",
@@ -127,12 +121,9 @@ func exiftoolMetadataFix(dirPath string) error {
 	return cmd.Run()
 }
 
-
-// ====== START EXPERIMENT =====
-
-// Google Photos now has file names such as filename.extension.supplemental-meta.json and other variants
-// Temporarily creating another function which handles these wildcard cases.
-func exiftoolMetadataFixVariant(dirPath string) error {
+// Google Photos now has file names such as filename.extension.supplemental-meta*.json and other variants
+// This function handles these cases by going file by file and doing the update
+func exiftoolMetadataFixFileByFile(dirPath string) error {
 	// Compile a regex to match the path up to the original file extension
 	filenamePattern := regexp.MustCompile(`^(.*?\.\w+)\.`)
 
@@ -193,8 +184,6 @@ func exiftoolMetadataFixVariant(dirPath string) error {
 
 	return err
 }
-
-// ====== END EXPERIMENT =====
 
 func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]bool) error {
 	// Rename .TS.mp4 files to .mp4
@@ -326,7 +315,3 @@ func renameHEICFiles(path string, info os.FileInfo, renamedFiles map[string]bool
 	}
 	return nil
 }
-
-// TODO: When we download the same folder like Photos from 2024 multiple times a year, there are new HEIC files because from Takeout
-// they are HEIC and our script renamed it to JPG in a past iteration. We need to delete any dupe HEIC files at the end of it all.
-// So if IMG_1642.jpg exists, delete IMG_1642.HEIC and so on.
