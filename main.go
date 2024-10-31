@@ -53,10 +53,10 @@ func main() {
 		}
 
 		// Call both renaming functions in sequence
-		if err := renameHEICJSONFiles(path, info, renamedFiles); err != nil {
+		if err := renameHEICJSONToJPGJSON(path, info, renamedFiles); err != nil {
 			return fmt.Errorf("error in renameHEICJSONFiles: %v", err)
 		}
-		if err := renameHEICFiles(path, info, renamedFiles); err != nil {
+		if err := renameHEICToJPG(path, info, renamedFiles); err != nil {
 			return fmt.Errorf("error in renameHEICFiles: %v", err)
 		}
 		return nil
@@ -220,7 +220,7 @@ func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]boo
 }
 
 // Rename HEIC.*.json files to jpg.json files
-func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]bool) error {
+func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[string]bool) error {
 	// info.Name() is the filename only, path is the full path to file
 
 	if renamedFiles[path] == true {
@@ -307,7 +307,7 @@ func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]
 }
 
 // Rename HEIC files to jpg files
-func renameHEICFiles(path string, info os.FileInfo, renamedFiles map[string]bool) error {
+func renameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool) error {
 	fmt.Println("===")
 
 	// info.Name() is the filename only, path is the full path to file
