@@ -40,7 +40,7 @@ func main() {
 	// Keep track of renamed file paths
 	// renamedFiles := make(map[string]bool)
 
-	// // Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
+	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
 
 	// Use a map to keep track of renamed files
 	renamedFiles := make(map[string]bool)
@@ -50,30 +50,19 @@ func main() {
 			return err // Handle any errors while walking
 		}
 
-		// Call the renaming function
-		return renameHEICJSONFiles(path, info, renamedFiles)
-	}); err != nil {
-		fmt.Printf("Error walking the path: %v\n", err)
-		return
-	} else {
-		fmt.Println("All files processed successfully.")
-	}
-
-
-	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err // Handle any errors while walking
+		// Call both renaming functions in sequence
+		if err := renameHEICJSONFiles(path, info, renamedFiles); err != nil {
+			return fmt.Errorf("error in renameHEICJSONFiles: %v", err)
 		}
-
-		// Call the renaming function
-		return renameHEICFiles(path, info, renamedFiles)
+		if err := renameHEICFiles(path, info, renamedFiles); err != nil {
+			return fmt.Errorf("error in renameHEICFiles: %v", err)
+		}
+		return nil
 	}); err != nil {
 		fmt.Printf("Error walking the path: %v\n", err)
-		return
 	} else {
 		fmt.Println("All files processed successfully.")
 	}
-
 
 	// Update the datetime from json to image/video files in the specified directory and its subdirectories
 	// This needs to be run after any file renaming/updating has taken place
@@ -85,12 +74,12 @@ func main() {
 	// 	fmt.Println("Command executed successfully.")
 	// }
 
-	// if err := exiftoolMetadataFixVariant(dirPath); err != nil {
-	// 	fmt.Println("Error executing exiftool:", err)
-	// 	return
-	// } else {
-	// 	fmt.Println("Command executed successfully.")
-	// }
+	if err := exiftoolMetadataFixVariant(dirPath); err != nil {
+		fmt.Println("Error executing exiftool:", err)
+		return
+	} else {
+		fmt.Println("Command executed successfully.")
+	}
 
 }
 
@@ -256,6 +245,7 @@ func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]
 
 	// Check if the file is a JSON file
 	if strings.HasSuffix(info.Name(), ".json") {
+		fmt.Println("===")
 		fmt.Printf("info.Name(): %s\n", info.Name())
 		fmt.Printf("Found JSON file: %s\n", path)
 		
@@ -309,7 +299,13 @@ func renameHEICJSONFiles(path string, info os.FileInfo, renamedFiles map[string]
 
 // Rename HEIC files to jpg files
 func renameHEICFiles(path string, info os.FileInfo, renamedFiles map[string]bool) error {
+	fmt.Println("===")
+
 	// info.Name() is the filename only, path is the full path to file
+
+	if renamedFiles[path] == true {
+		return nil
+	}
 
 	// If its a directory, we don't need to process it, we need to look for files
 	if info.IsDir() {
@@ -317,11 +313,15 @@ func renameHEICFiles(path string, info os.FileInfo, renamedFiles map[string]bool
 	}
 
 	// Check if the file is a HEIC file
-	if  strings.Contains(info.Name(), "HEIC") {
-		fmt.Printf("info.Name(): %s\n", info.Name())
-		fmt.Println("ASDSASDS It is a HEIC file")
+	if  strings.HasSuffix(info.Name(), ".HEIC") {
 
+		fmt.Printf("HEIC file found: %s\n", info.Name())
 
+		newPath := strings.TrimSuffix(path, ".HEIC") + ".jpg"
+
+		if err := os.Rename(path, newPath); err != nil {
+			return fmt.Errorf("failed to rename file: %w", err)
+		}
 		
 	}
 	return nil
