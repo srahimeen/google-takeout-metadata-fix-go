@@ -37,11 +37,7 @@ func main() {
 		return
 	}
 
-	// Keep track of renamed file paths
-	// renamedFiles := make(map[string]bool)
-
 	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
-
 	// TODO TS.mp4 still needs to be done
 
 	// Use a map to keep track of renamed files
@@ -67,6 +63,10 @@ func main() {
 	}
 
 	// Update the datetime from json to image/video files in the specified directory and its subdirectories
+	// TODO: Have a map to keep track of processed files
+	// Make another function to go through all files again, skipping files processed by exiftoolMetadataFixFileByFile
+	// These files do not have a JSON metadata file (direct download instead of Google Takeout)
+	// Set the date for these files based on filename
 	if err := exiftoolMetadataFixFileByFile(dirPath); err != nil {
 		fmt.Println("Error executing exiftool:", err)
 		return
@@ -303,7 +303,7 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 
 				// Case for JSON files which have no supplemental string, ie: IMG_2086.HEIC.json
 				if (strings.Contains(secondToLast, "HEIC")) {
-					fmt.Printf("Second to last part DOES not have supplemental: %s\n", secondToLast)
+					fmt.Printf("Second to last part DOES NOT have supplemental: %s\n", secondToLast)
 					
 					// Change the HEIC to jpg in the file name
 					parts[len(parts)-2] = "jpg"
