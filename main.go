@@ -122,9 +122,11 @@ func exiftoolMetadataFixBulk(dirPath string) error {
 }
 
 // Google Photos now has file names such as filename.extension.supplemental-meta*.json and other variants
-// This function handles these cases by going file by file and doing the update
+// This function handles these cases by going through each JSON file
+// Finding the associated media file, and then performing metadata updates
+// Media files which have no matching JSON files are ignored 
 func exiftoolMetadataFixFileByFile(dirPath string) error {
-	// Compile a regex to match the path up to the original file extension
+	// Regex to get string until first extension, ie. the media extension (.jpg, .mp4, etc.)
 	filenamePattern := regexp.MustCompile(`^(.*?\.\w+)\.`)
 
 	var successCount, errorCount, skipCount int
@@ -134,33 +136,42 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 			return err
 		}
 
+		fmt.Println("Current filepath: " + path)
+
 		// Check if the file has a .json extension
 		if !info.IsDir() && filepath.Ext(info.Name()) == ".json" {
 			fmt.Println("====")
 			fmt.Println("Found JSON metadata file:", path)
 
 			// Extract the path up to the original file extension
+			// This grabs the filename up to the media extension file
+			// IMG_20201031_144417.jpg.supplemental-metadata.json -> IMG_20201031_144417.jpg
 			match := filenamePattern.FindStringSubmatch(path)
-			if len(match) > 1 {
-				nonJSONFilePath := match[1]
+
+			fmt.Printf("Filenames until first extension: %v\n", match)
+
+			if len(match) > 1 { // Otherwise we did not find the media file
+				nonJSONFilePath := match[1] // The second item in array is the best formatted string
 				fmt.Println("Media filename with extension:", nonJSONFilePath)
 
-				// Execute exiftool command to update properties from JSON to the image file
+				// TODO: check if DateTimeOriginal, if does then skip
+				// TODO: make another function that uses DateTimeOriginal to update the values that runs before this one
+
+				// Use exiftool to update metadata from JSON to the media file
 				cmd := exec.Command("exiftool",
 					"-d", "%s",
-					"-tagsfromfile", path, // JSON file as the source
+					"-tagsfromfile", path, // JSON file as the source of metadata
 					"-DateTimeOriginal<PhotoTakenTimeTimestamp",
 					"-FileCreateDate<PhotoTakenTimeTimestamp",
 					"-FileModifyDate<PhotoTakenTimeTimestamp",
 					"-overwrite_original",
 					"-ext", "mp4", "-ext", "jpg", "-ext", "heic", "-ext", "mov", "-ext", "jpeg", "-ext", "png", "-ext", "gif", "-ext", "webp",
-					nonJSONFilePath, // Target image file
+					nonJSONFilePath, // Target image file as the file to update
 				)
 
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 
-				// Run the command and check for errors
 				if err := cmd.Run(); err != nil {
 					fmt.Println("Error updating file:", nonJSONFilePath, "with JSON:", path, "-", err)
 					errorCount++
@@ -169,11 +180,13 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 					successCount++
 				}
 			} else {
-				fmt.Println("Non-JSON filename not found for:", path)
+				fmt.Println("Media file for this JSON file was not found: ", path)
 				skipCount++
 			}
 
 			fmt.Println("====")
+		} else {
+			fmt.Println(path + " is not a JSON file, skipping!")
 		}
 		return nil
 	})
@@ -187,6 +200,14 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 
 // TODO currently does not support supplemental json names
 // Needs to be updated
+// Check if .json
+// check if .TS.mp4.json or TS.mp4.supplemental*.json
+// If any of those cases match, find the .TS.mp4 file
+// Rename it and the json file
+// Or
+// Find all files which have TS.mp4 in them, json or not
+// Rename them to just remove the TS
+// That is all
 func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]bool) error {
 	// Rename .TS.mp4 files to .mp4
 	if strings.HasSuffix(info.Name(), ".TS.mp4") {
@@ -302,9 +323,12 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 			}
 
 		} else {
-			fmt.Println("This JSON file is NOT for a HEIC file")
+			fmt.Println("This JSON file is NOT for a HEIC file, skipping!")
 		}
+	} else {
+		fmt.Println("Not a HEIC JSON file, skipping!")
 	}
+
 	return nil
 }
 
@@ -334,6 +358,8 @@ func renameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 			return fmt.Errorf("failed to rename file: %w", err)
 		}
 		
+	} else {
+		fmt.Println("Not a HEIC file, no need to rename, skipping!")
 	}
 	return nil
 }
