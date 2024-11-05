@@ -13,18 +13,20 @@ This script assumes you use the following process to perform your Google Photos 
 
 > Google Takeout only stores _your_ photos in your album folder and does not have photos shared by others in them. Even if you "Save" them in Google Photos, it only ends up in your "Photos from Year" folder and not your album folders.
 
+> The JSON metadata file can be in the following formats: filename.extension.json OR filename.extension.supplemental-metadata.json, filename.extension.supplemental-me.json, filename.extension.su\*.json, and so on. It truncates the "supplemental" portion if the file name is > 47 chars. The script handles all of these cases.
+
 ## Technical Requirements
 
-1. This script assumes you are a Android/Pixel user as it does some HEIC conversions
+1. This script assumes you are a Android/Pixel user as it does some HEIC to JPG conversions. It might need modifications if you want to keep HEIC files as HEIC.
 2. [Go](https://go.dev/) needs to be installed and be available on the path `go`
 3. [exiftool](https://exiftool.org/) needs to be installed and be available on the path `exiftool`
-4. This script has only been tested to work on Windows
+4. This script has only been tested to work on Windows 10
 
 ## Running the script
 
 1. Clone or download this repository
 2. Open a Terminal/PowerShell at the root of the repo and run `go run main.go`
-3. Enter the path to the folder where your Google takeout is, for example `D:\Google Photos`
+3. Enter the path to the folder where your Google takeout is, for example `E:\Google Photos`
 4. The script will perform all the metadata updates and display the progress
 
 ## What metadata is being updated?
@@ -32,7 +34,7 @@ This script assumes you use the following process to perform your Google Photos 
 At a top level, this script does the following:
 
 1. Renames all `.TS.mp4` files to just `.mp4`
-2. Renames any JSON metadata files which end in `.TS.mp4.json` to end in just `.mp4.json` to match the files updated in step 1
+2. Renames any JSON metadata files which end in `.TS.mp4.json` or `.TS.mp4.supp*.json` to end in just `.mp4.json` to match the files updated in step 1
 3. Converts all HEIC files which have an associated HEIC.json file to JPG
 4. Renames the JSON metadata file associated with the HEIC file in step 3 to `JPG.json` for example `filename.HEIC.json` would become `filename.jpg.json`
 5. Updates the date/timestamp metadata of all photo and video files using the JSON metadata files using `exiftool`

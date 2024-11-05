@@ -37,9 +37,6 @@ func main() {
 		return
 	}
 
-	// Handle TS.mp4, TS.json.mp4, .HEIC, .HEIC.json files 
-	// TODO TS.mp4 still needs to be done
-
 	// Use a map to keep track of renamed files
 	renamedFiles := make(map[string]bool)
 
@@ -48,7 +45,9 @@ func main() {
 			return err // Handle any errors while walking
 		}
 
-		// Call both renaming functions in sequence
+		if err := renameTSMP4Files(path, info, renamedFiles); err != nil {
+			return fmt.Errorf("error in renameTSMP4Files: %v", err)
+		}
 		if err := renameHEICJSONToJPGJSON(path, info, renamedFiles); err != nil {
 			return fmt.Errorf("error in renameHEICJSONFiles: %v", err)
 		}
@@ -126,6 +125,8 @@ func exiftoolMetadataFixBulk(dirPath string) error {
 // Finding the associated media file, and then performing metadata updates
 // Media files which have no matching JSON files are ignored 
 func exiftoolMetadataFixFileByFile(dirPath string) error {
+	fmt.Println("==== FIXING METADATA USING EXIFTOOL ====")
+
 	// Regex to get string until first extension, ie. the media extension (.jpg, .mp4, etc.)
 	filenamePattern := regexp.MustCompile(`^(.*?\.\w+)\.`)
 
@@ -140,7 +141,7 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 
 		// Check if the file has a .json extension
 		if !info.IsDir() && filepath.Ext(info.Name()) == ".json" {
-			fmt.Println("====")
+			fmt.Println("===")
 			fmt.Println("Found JSON metadata file:", path)
 
 			// Extract the path up to the original file extension
@@ -152,7 +153,7 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 
 			if len(match) > 1 { // Otherwise we did not find the media file
 				nonJSONFilePath := match[1] // The second item in array is the best formatted string
-				fmt.Println("Media filename with extension:", nonJSONFilePath)
+				fmt.Println("Media filename with extension found:", nonJSONFilePath)
 
 				// TODO: check if DateTimeOriginal, if does then skip
 				// TODO: make another function that uses DateTimeOriginal to update the values that runs before this one
@@ -176,17 +177,15 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 					fmt.Println("Error updating file:", nonJSONFilePath, "with JSON:", path, "-", err)
 					errorCount++
 				} else {
-					fmt.Println("Updated", nonJSONFilePath, "with metadata from", path)
+					fmt.Println("Updated ", nonJSONFilePath, " with metadata from ", path)
 					successCount++
 				}
 			} else {
 				fmt.Println("Media file for this JSON file was not found: ", path)
 				skipCount++
 			}
-
-			fmt.Println("====")
 		} else {
-			fmt.Println(path + " is not a JSON file, skipping!")
+			// fmt.Println(path + " is not a JSON file, skipping!")
 		}
 		return nil
 	})
@@ -198,45 +197,92 @@ func exiftoolMetadataFixFileByFile(dirPath string) error {
 	return err
 }
 
-// TODO currently does not support supplemental json names
-// Needs to be updated
-// Check if .json
-// check if .TS.mp4.json or TS.mp4.supplemental*.json
-// If any of those cases match, find the .TS.mp4 file
-// Rename it and the json file
-// Or
-// Find all files which have TS.mp4 in them, json or not
-// Rename them to just remove the TS
-// That is all
+// Renames TS.mp4 and TS.mp4.json and TS.mp4.supplemen-bla.json files
+// Removes the TS and supplemen-bla portion
 func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]bool) error {
-	// Rename .TS.mp4 files to .mp4
-	if strings.HasSuffix(info.Name(), ".TS.mp4") {
-		fmt.Println("Found TS.mp4 file:", info.Name())
 
-		newPath := strings.Replace(path, ".TS.mp4", ".mp4", 1)
-		fmt.Printf("Renaming %s to %s\n", path, newPath)
-		if err := os.Rename(path, newPath); err != nil {
-			fmt.Println("Error renaming file:", err)
-			return err
-		}
-
-		// Record the renamed TS.mp4 file
-		renamedFiles[path] = true
+	// We have already processed this file
+	if renamedFiles[path] == true {
+		return nil
 	}
 
-	// Rename .TS.mp4.json files to .mp4.json
-	if strings.HasSuffix(info.Name(), ".TS.mp4.json") {
-		fmt.Println("Found TS.mp4.json file:", info.Name())
+	// If its a directory, we don't need to process it, we need to look for files
+	if info.IsDir() {
+		return nil
+	}
 
-		newPath := strings.Replace(path, ".TS.mp4.json", ".mp4.json", 1)
-		fmt.Printf("Renaming %s to %s\n", path, newPath)
-		if err := os.Rename(path, newPath); err != nil {
-			fmt.Println("Error renaming file:", err)
-			return err
+	// Rename .TS.mp4 files to .mp4
+	if strings.Contains(path, ".TS.") {
+
+		if strings.Contains(path, "json") { // It is a TS.json or TS.supplementa-metadata.json file
+
+			fmt.Println("Found JSON file with TS exension: " + path)
+			
+			parts := strings.Split(info.Name(), ".")
+
+			fmt.Printf("Parts array %v\n", parts)
+
+			// 1. If it is filename.TS.mp4.json, then parts will be size 4
+			// 2. If it is filename.TS.mp4.supplemental-metadata.json, size will be 5
+
+			secondToLast := parts[len(parts)-2]
+
+			if len(parts) == 4 && secondToLast == "mp4" { // Case 1
+
+				parts = append(parts[:1], parts[2:]...)
+				newFilename := strings.Join(parts, ".")
+				newPath := filepath.Join(filepath.Dir(path), newFilename)
+
+				// fmt.Println("newPath : " + newPath)
+
+				if err := os.Rename(path, newPath); err != nil {
+					return fmt.Errorf("Case 1: Failed to rename file: %w", err)
+				}
+
+				// Document that we have renamed this file
+				renamedFiles[path] = true;
+
+				fmt.Printf("Renamed from %s to %s\n", path, newPath)
+
+			} else if len(parts) == 5 && secondToLast != "mp4" { // Case 2
+
+				// Remove the "TS" part at index 1
+				parts = append(parts[:1], parts[2:]...)
+
+				// Now remove the "supplemental-metadata" part, which is at index 2 after the first removal
+				parts = append(parts[:2], parts[3:]...)
+
+				newFilename := strings.Join(parts, ".")
+				newPath := filepath.Join(filepath.Dir(path), newFilename)
+
+				// fmt.Println("newPath : " + newPath)
+
+				if err := os.Rename(path, newPath); err != nil {
+					return fmt.Errorf("Case 2: Failed to rename file: %w", err)
+				}
+
+				// Document that we have renamed this file
+				renamedFiles[path] = true;
+
+				fmt.Printf("Renamed from %s to %s\n", path, newPath)
+			}
+		} else { // It is just a TS.mp4 file
+
+			fmt.Println("Found media file with TS exension: " + path)
+
+			// Rename file to remove the .TS sub extension
+			newPath := strings.Replace(path, ".TS.", ".", 1)
+
+			err := os.Rename(path, newPath)
+			if err != nil {
+				return fmt.Errorf("Failed to rename file %s to %s: %w", path, newPath, err)
+			}
+
+			// Document that we have renamed this file
+			renamedFiles[path] = true;
+
+			fmt.Printf("Renamed %s to %s\n", path, newPath)
 		}
-
-		// Record the renamed TS.mp4.json file
-		renamedFiles[path] = true
 	}
 
 	return nil
@@ -244,8 +290,9 @@ func renameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]boo
 
 // Rename HEIC.*.json files to jpg.json files
 func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[string]bool) error {
-	// info.Name() is the filename only, path is the full path to file
+	// INFO: info.Name() is the filename only, path is the full path to file
 
+	// We already processed this file
 	if renamedFiles[path] == true {
 		return nil
 	}
@@ -258,23 +305,25 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 	// Check if the file is a JSON file
 	if strings.HasSuffix(info.Name(), ".json") {
 		fmt.Println("===")
-		fmt.Printf("info.Name(): %s\n", info.Name())
-		fmt.Printf("Found JSON file: %s\n", path)
+		// fmt.Printf("info.Name(): %s\n", info.Name())
+		// fmt.Printf("Found JSON file: %s\n", path)
 		
 		// Check if the JSON file belongs to a HEIC parent file
 		if strings.Contains(info.Name(), "HEIC") {
-			fmt.Println("It is a HEIC file too")
+			fmt.Println("Found HEIC JSON file: " + path)
 
 			parts := strings.Split(info.Name(), ".")
 
-			fmt.Printf("Parts array %v\n", parts)
+			// fmt.Printf("Parts array %v\n", parts)
 
-			// Case for JSON files which have supplemental something, ie. IMG_2086.HEIC.supplemental-metadata.json
+			// Case 1: IMG_2086.HEIC.supplemental-metadata.json, where second to last element is supplemental-blabla
+			// Case 2: IMG_2086.HEIC.json, second to last element is HEIC
+
 			if len(parts) >= 2 {
 				secondToLast := parts[len(parts)-2]
 
-				if (strings.Contains(secondToLast, "supple")) {
-					fmt.Printf("Second to last part is supplemental: %s\n", secondToLast)
+				if (strings.Contains(secondToLast, "supple")) { // Case 1
+					// fmt.Printf("Second to last part is supplemental: %s\n", secondToLast)
 
 					parts = append(parts[:len(parts)-2], parts[len(parts)-1:]...)
 					
@@ -287,22 +336,19 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 					}
 
 					updatedFilenameString := strings.Join(parts, ".")
-					fmt.Printf("updatedFilenameString: %s\n", updatedFilenameString)
+					// fmt.Printf("updatedFilenameString: %s\n", updatedFilenameString)
 
 					// Rename the file
 					newPath := filepath.Join(filepath.Dir(path), updatedFilenameString)
 					if err := os.Rename(path, newPath); err != nil {
-						return fmt.Errorf("failed to rename file: %w", err)
+						return fmt.Errorf("Failed to rename file: %w", err)
 					}
 					
 					// Document that we have renamed this file
 					renamedFiles[path] = true;
 
 					fmt.Printf("HEIC JSON file renamed from %s to: %s\n", info.Name(), newPath)
-				}
-
-				// Case for JSON files which have no supplemental string, ie: IMG_2086.HEIC.json
-				if (strings.Contains(secondToLast, "HEIC")) {
+				} else if (strings.Contains(secondToLast, "HEIC")) { // Case 2
 					fmt.Printf("Second to last part DOES NOT have supplemental: %s\n", secondToLast)
 					
 					// Change the HEIC to jpg in the file name
@@ -312,7 +358,7 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 					// Rename the file
 					newPath := filepath.Join(filepath.Dir(path), updatedFilenameString)
 					if err := os.Rename(path, newPath); err != nil {
-						return fmt.Errorf("failed to rename file: %w", err)
+						return fmt.Errorf("Failed to rename file: %w", err)
 					}
 
 					// Document that we have renamed this file
@@ -323,10 +369,10 @@ func renameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 			}
 
 		} else {
-			fmt.Println("This JSON file is NOT for a HEIC file, skipping!")
+			// fmt.Println("This JSON file is NOT for a HEIC file, skipping!")
 		}
 	} else {
-		fmt.Println("Not a HEIC JSON file, skipping!")
+		// fmt.Println("Not a HEIC JSON file, skipping!")
 	}
 
 	return nil
@@ -347,7 +393,7 @@ func renameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 		return nil
 	}
 
-	// Check if the file is a HEIC file
+	// Check if the file is a HEIC file like IMG122323.HEIC
 	if  strings.HasSuffix(info.Name(), ".HEIC") {
 
 		fmt.Printf("HEIC file found: %s\n", info.Name())
@@ -357,9 +403,13 @@ func renameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 		if err := os.Rename(path, newPath); err != nil {
 			return fmt.Errorf("failed to rename file: %w", err)
 		}
-		
+
+		// Document that we have renamed this file
+		renamedFiles[path] = true;
+
+		fmt.Printf("HEIC file renamed from %s to: %s\n", info.Name(), newPath)
 	} else {
-		fmt.Println("Not a HEIC file, no need to rename, skipping!")
+		// fmt.Println("Not a HEIC file, no need to rename, skipping!")
 	}
 	return nil
 }
