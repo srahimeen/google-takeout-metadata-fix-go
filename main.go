@@ -67,9 +67,9 @@ func main() {
 
 		return nil
 	}); err != nil {
-		fmt.Printf("Error walking the path: %v\n", err)
+		fmt.Printf("Error in Phase 1: %v\n", err)
 	} else {
-		fmt.Println("All files processed successfully.")
+		fmt.Println("Phase 1 completed successfully!")
 	}
 
 	// Phase 2
@@ -86,9 +86,9 @@ func main() {
 
 		return nil
 	}); err != nil {
-		fmt.Printf("Error during second pass: %v\n", err)
+		fmt.Printf("Error in Phase 2: %v\n", err)
 	} else {
-		fmt.Println("All files processed successfully.")
+		fmt.Println("Phase 2 completed successfully!")
 	}
 
 	// TODO (maybe): Make another function to go through all files again, skipping files processed by exiftoolMetadataFixFileByFile (track this in a map)
