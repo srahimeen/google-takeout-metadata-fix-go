@@ -37,10 +37,11 @@ func main() {
 		return
 	}
 
-	// Use a map to keep track of renamed files
+	// Use a map to keep track of all renamed files so we don't double rename
 	renamedFiles := make(map[string]bool)
 
-	// Use a map to keep track of HEIC.json files, we only want to rename these HEIC files
+	// Use a map to keep track of .HEIC.json files, we only want to rename the matching .HEIC files
+	// HEIC files which do not have a json file do not need to be renamed
 	renamedHEICJSONFiles := make(map[string]bool)
 
 	// We need to update files in three phases, walking the filepath each time
@@ -52,7 +53,7 @@ func main() {
 	// Phase 1
 	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err // Handle any errors while walking
+			return err
 		}
 
 		if err := utils.RenameTSMP4Files(path, info, renamedFiles); err != nil {
