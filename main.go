@@ -47,6 +47,7 @@ func main() {
 	// We need to update files in three phases, walking the filepath each time
 	// Phase 1: Rename TS.mp4 files and TS.mp4.*.json files to remove the TS
 	//			Rename HEIC.*.json files to jpg.*.json files and collect these in renamedHEICJSONFiles
+	//			TODO: Some jpg files are secretly webp files, we need to rename the file and the associated json file.
 	// Phase 2: Find the HEIC files associated with the json files in renamedHEICJSONFiles, and rename them to jpg
 	// Phase 3: All renaming has been completed, so run exiftool to update metadata
 
