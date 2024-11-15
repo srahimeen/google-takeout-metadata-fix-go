@@ -44,11 +44,15 @@ func main() {
 	// HEIC files which do not have a json file do not need to be renamed
 	renamedHEICJSONFiles := make(map[string]bool)
 
+	// Keep track of the JPG files which were renamed to WEBP
+	renamedJPGToWEBPFiles := make(map[string]bool)
+
 	// We need to update files in three phases, walking the filepath each time
 	// Phase 1: Rename TS.mp4 files and TS.mp4.*.json files to remove the TS
 	//			Rename HEIC.*.json files to jpg.*.json files and collect these in renamedHEICJSONFiles
-	//			TODO: Some jpg files are secretly webp files, we need to rename the file and the associated json file.
+	//			Some jpg files are secretly webp files, we need to rename the file and the associated json file.
 	// Phase 2: Find the HEIC files associated with the json files in renamedHEICJSONFiles, and rename them to jpg
+	//			Find the JSON files associated with the jpg files renabed by RenameJPGToWEBP, and rename them to webp
 	// Phase 3: All renaming has been completed, so run exiftool to update metadata
 
 	// Phase 1
@@ -65,6 +69,10 @@ func main() {
 			return fmt.Errorf("error in renameHEICJSONFiles: %v", err)
 		}
 
+		if err := utils.RenameJPGToWEBP(path, info, renamedFiles, renamedJPGToWEBPFiles); err != nil {
+			return fmt.Errorf("error in RenameJPGToWEBP: %v", err)
+		}
+
 		return nil
 	}); err != nil {
 		fmt.Printf("Error in Phase 1: %v\n", err)
@@ -79,9 +87,13 @@ func main() {
 		}
 
 		// We need renameHEICJSONToJPGJSON to run completely first
-		// Then we can rename the associated HEIC files to JPG
 		if err := utils.RenameHEICToJPG(path, info, renamedFiles, renamedHEICJSONFiles); err != nil {
 			return fmt.Errorf("error in renameHEICToJPG: %v", err)
+		}
+
+		// We need RenameJPGToWEBP to run completely first
+		if err := utils.RenameJPGJSONToWEBPJSON(path, info, renamedFiles, renamedJPGToWEBPFiles); err != nil {
+			return fmt.Errorf("error in RenameJPGJSONToWEBPJSON: %v", err)
 		}
 
 		return nil
@@ -100,7 +112,7 @@ func main() {
 		fmt.Println("Error executing exiftool:", err)
 		return
 	} else {
-		fmt.Println("Command executed successfully.")
+		fmt.Println("Phase 3 completed successfully!")
 	}
 
 }

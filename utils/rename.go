@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -223,7 +225,7 @@ func RenameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 	}
 
 	// Check if the file is a HEIC file like IMG122323.HEIC
-	if  strings.HasSuffix(info.Name(), ".HEIC") {
+	if strings.HasSuffix(info.Name(), ".HEIC") {
 
 		fmt.Println("===")
 		fmt.Printf("HEIC file found: %s\n", info.Name())
@@ -231,7 +233,7 @@ func RenameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 		newPath := strings.TrimSuffix(path, ".HEIC") + ".jpg"
 
 		if err := os.Rename(path, newPath); err != nil {
-			return fmt.Errorf("failed to rename file: %w", err)
+			return fmt.Errorf("Failed to rename file: %w", err)
 		}
 
 		// Document that we have renamed this file
@@ -241,5 +243,113 @@ func RenameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool
 	} else {
 		// fmt.Println("Not a HEIC file, no need to rename, skipping!")
 	}
+	return nil
+}
+
+// Uses exiftool to get the file type of a given file
+func checkFileType(filePath string) (string, error) {
+	cmd := exec.Command("exiftool", "-FileType", filePath)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("error executing exiftool: %w", err)
+	}
+
+	// Parse output to extract the file type
+	output := strings.TrimSpace(out.String())
+	if strings.Contains(output, ": ") {
+		return strings.Split(output, ": ")[1], nil
+	}
+	return "Unknown", nil
+}
+
+// Some JPG files are actually WEBP files, this renames them to match
+func RenameJPGToWEBP(path string, info os.FileInfo, renamedFiles map[string]bool, renamedJPGToWEBPFiles map[string]bool) error {
+	if renamedFiles[path] == true {
+		return nil
+	}
+
+	// If its a directory, we don't need to process it, we need to look for files
+	if info.IsDir() {
+		return nil
+	}
+
+	// Get the file extension
+	fileExtension := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+
+	// Check file type using EXIF data
+	fileType, err := checkFileType(path)
+	if err != nil {
+		fmt.Printf("Failed to get file type for %s: %v\n", path, err)
+		return nil
+	}
+
+	if strings.Contains(fileType, "WEBP") {
+
+		// WEBP has mismatched jpg extension
+		if (strings.Contains(strings.ToLower(fileExtension), "jpg")) {
+			// fmt.Printf("%s is a WEBP, and the extension is %s\n", path, fileExtension)
+
+			// Rename this file to change the extension to webp
+			newPath := strings.TrimSuffix(path, ".jpg") + ".webp"
+
+			if err := os.Rename(path, newPath); err != nil {
+				return fmt.Errorf("failed to rename %s to %s: %w", path, newPath, err)
+			}
+
+			// Record that we have renamed this JPG file to WEBP
+			// We need to update the associated JSON file later
+
+			// Get the base name of the file until the first extension (.)
+			nameWithoutExt := strings.SplitN(info.Name(), ".", 2)[0]
+
+			// fmt.Printf("Filename without any extensions: %s\n", nameWithoutExt)
+
+			// Record the renamed file by its name without extensions
+			renamedJPGToWEBPFiles[nameWithoutExt] = true
+
+			renamedFiles[path] = true
+
+			fmt.Printf("JPG file renamed to WEBP from %s to: %s\n", info.Name(), newPath)
+		}
+
+		return nil
+	}
+	
+	return nil
+}
+
+// Update the JSON files of the files updated by RenameJPGToWEBP to match the new name
+func RenameJPGJSONToWEBPJSON(path string, info os.FileInfo, renamedFiles map[string]bool, renamedJPGToWEBPFiles map[string]bool) error {
+	if renamedFiles[path] {
+		return nil
+	}
+
+	// If its a directory, we don't need to process it, we need to look for files
+	if info.IsDir() {
+		return nil
+	}
+
+	fmt.Printf("Current file: %s\n", path)
+
+
+	// Get the base name of the file until the first extension (.)
+	nameWithoutExt := strings.SplitN(info.Name(), ".", 2)[0]
+
+	if  renamedJPGToWEBPFiles[nameWithoutExt] && strings.HasSuffix(info.Name(), "json") {
+		// This is a JSON file whose JPG file was renamed to WEBP
+		// Rename this file to match
+
+		newPath := strings.Replace(path, ".jpg.", ".webp.", 1)
+
+		if err := os.Rename(path, newPath); err != nil {
+			return fmt.Errorf("Failed to rename file: %w", err)
+		}
+
+		fmt.Printf("Renamed JSON (for JPG->WEBP) file from %s to %s\n", path, newPath)
+		
+	}
+
 	return nil
 }
