@@ -2,18 +2,14 @@
 
 When photos and videos are backed up from Google Photos using Google Takeout, the exif metadata properties are often not correct. The `DateTimeOriginal`, `FileCreateDate`, and `FileModifyDate` end up being the timestamp when the files were downloaded, and not the actual timestamp of when the photo/video was created. Google provides us with a JSON file for each photo/video which contains the original metadata (including the correct date/timestamp properties), which we can use to correct the metadata of the downloaded files.
 
-This script intends to provide an easy way to fix all the metadata issues related the Google Takeout output.
+This script intends to provide an easy way to fix all the metadata issues related the Google Takeout files.
 
 This script assumes you use the following process to perform your Google Photos backup:
 
 1. Download your Google Takeout output
 2. Unzip it
-3. Download your Google Photos albums separately. Copy/paste that folder in your main Google Takeout directory (where you unzipped all the files) and merge the folders. This ensures that photos which were shared by others in your shared albums are actually copied to your album folders.
+3. (Optional) Download your Google Photos albums separately. Copy/paste that folder in your main Google Takeout directory (where you unzipped all the files) and merge the folders. This ensures that photos which were shared by others in your shared albums are actually copied to your album folders.
 4. Once this Google Takeout folder is ready, follow the instructions to run the script at the top level of this folder.
-
-> Google Takeout only stores _your_ photos in your album folder and does not have photos shared by others in them. Even if you "Save" them in Google Photos, it only ends up in your "Photos from Year" folder and not your album folders.
-
-> The JSON metadata file can be in the following formats: filename.extension.json OR filename.extension.supplemental-metadata.json, filename.extension.supplemental-me.json, filename.extension.su\*.json, and so on. It truncates the "supplemental" portion if the file name is > 47 chars. The script handles all of these cases.
 
 ## Technical Requirements
 
@@ -45,6 +41,12 @@ We do all of the above because:
 1. exiftool sometimes has trouble parsing files which have "double" extensions such as .TS.mp4, so we can just convert them to .mp4 without any issues. The `.TS.mp4` files are created by Top Shot or motion photos.
 2. Google Photos converts HEIC files to JPG in their backend. However, when we download the files through Google Takeout, it keeps the .HEIC extension. exiftool does not like that, so we need to fix the extension to be JPG. Note that if you manually download Photo Albums from Google Photos (bypassing Googke Takeout) then any HEIC download are true HEIC, so we need to make sure we don't convert these files to JPG, which is why we check for a JSON metadata file first.
 3. Google provides us the metadata in the form of JSON files. We can fetch the metadata from these files and use exiftool to override the properties in the image/video files.
+
+### Additional info
+
+> Google Takeout only stores _your_ photos in your album folder and does not have photos shared by others in them. Even if you "Save" them in Google Photos, it only ends up in your "Photos from Year" folder and not your album folders.
+
+> The JSON metadata file can be in the following formats: filename.extension.json OR filename.extension.supplemental-metadata.json, filename.extension.supplemental-me.json, filename.extension.su\*.json, and so on. It truncates the "supplemental" portion if the file name is > 47 chars. The script handles all of these cases.
 
 ## Other useful commands
 
