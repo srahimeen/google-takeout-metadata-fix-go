@@ -57,6 +57,8 @@ func main() {
 
 	// Phase 1
 	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		fmt.Println("Phase 1 file: " + path)
+
 		if err != nil {
 			return err
 		}
@@ -82,6 +84,8 @@ func main() {
 
 	// Phase 2
 	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		fmt.Println("Phase 2 file: " + path)
+
 		if err != nil {
 			return err
 		}

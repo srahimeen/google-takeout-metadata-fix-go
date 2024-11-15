@@ -32,7 +32,7 @@ func RenameTSMP4Files(path string, info os.FileInfo, renamedFiles map[string]boo
 			
 			parts := strings.Split(info.Name(), ".")
 
-			fmt.Printf("Parts array %v\n", parts)
+			// fmt.Printf("Parts array %v\n", parts)
 
 			// 1. If it is filename.TS.mp4.json, then parts will be size 4
 			// 2. If it is filename.TS.mp4.supplemental-metadata.json, size will be 5
@@ -330,8 +330,6 @@ func RenameJPGJSONToWEBPJSON(path string, info os.FileInfo, renamedFiles map[str
 	if info.IsDir() {
 		return nil
 	}
-
-	fmt.Printf("Current file: %s\n", path)
 
 	// Get the base name of the file until the first extension (.)
 	nameWithoutExt := strings.SplitN(info.Name(), ".", 2)[0]
