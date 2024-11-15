@@ -205,7 +205,7 @@ func RenameHEICJSONToJPGJSON(path string, info os.FileInfo, renamedFiles map[str
 func RenameHEICToJPG(path string, info os.FileInfo, renamedFiles map[string]bool, renamedHEICJSONFiles map[string]bool) error {
 	// info.Name() is the filename only, path is the full path to file
 
-	if renamedFiles[path] == true {
+	if renamedFiles[path] {
 		return nil
 	}
 
@@ -266,7 +266,7 @@ func checkFileType(filePath string) (string, error) {
 
 // Some JPG files are actually WEBP files, this renames them to match
 func RenameJPGToWEBP(path string, info os.FileInfo, renamedFiles map[string]bool, renamedJPGToWEBPFiles map[string]bool) error {
-	if renamedFiles[path] == true {
+	if renamedFiles[path] {
 		return nil
 	}
 
@@ -332,7 +332,6 @@ func RenameJPGJSONToWEBPJSON(path string, info os.FileInfo, renamedFiles map[str
 	}
 
 	fmt.Printf("Current file: %s\n", path)
-
 
 	// Get the base name of the file until the first extension (.)
 	nameWithoutExt := strings.SplitN(info.Name(), ".", 2)[0]
